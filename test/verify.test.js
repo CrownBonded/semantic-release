@@ -3,6 +3,8 @@ import tempy from 'tempy';
 import verify from '../lib/verify';
 import {gitRepo} from './helpers/git-utils';
 
+// FIXME rewrite tests with added errors
+
 // Save the current process.env
 const envBackup = Object.assign({}, process.env);
 // Save the current working diretory

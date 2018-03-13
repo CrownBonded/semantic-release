@@ -3,6 +3,8 @@ import {stub} from 'sinon';
 import getLastRelease from '../lib/get-last-release';
 import {gitRepo, gitCommits, gitTagVersion, gitCheckout} from './helpers/git-utils';
 
+// FIXME rewrite test for new get-last-release based on branch tags
+
 // Save the current working diretory
 const cwd = process.cwd();
 

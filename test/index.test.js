@@ -62,7 +62,13 @@ test.serial('Plugins are called with expected values', async t => {
   await push();
 
   const lastRelease = {version: '1.0.0', gitHead: commits[commits.length - 1].hash, gitTag: 'v1.0.0'};
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
   const verifyConditions1 = stub().resolves();
   const verifyConditions2 = stub().resolves();
@@ -74,7 +80,16 @@ test.serial('Plugins are called with expected values', async t => {
   const publish1 = stub().resolves(release1);
   const success = stub().resolves();
 
-  const config = {branch: 'master', repositoryUrl, globalOpt: 'global', tagFormat: `v\${version}`};
+  const config = {branches: [{name: 'master'}], repositoryUrl, globalOpt: 'global', tagFormat: `v\${version}`};
+  const branches = [
+    {
+      channel: undefined,
+      name: 'master',
+      range: '>=1.0.0',
+      tags: [{channel: undefined, gitTag: 'v1.0.0', version: '1.0.0'}],
+      type: 'release',
+    },
+  ];
   const options = {
     ...config,
     verifyConditions: [verifyConditions1, verifyConditions2],
@@ -93,22 +108,22 @@ test.serial('Plugins are called with expected values', async t => {
   t.truthy(await semanticRelease(options));
 
   t.is(verifyConditions1.callCount, 1);
-  t.deepEqual(verifyConditions1.args[0][0], config);
-  t.deepEqual(verifyConditions1.args[0][1], {options, logger: t.context.logger});
+  t.deepEqual(verifyConditions1.args[0][0], {...config, branches});
+  t.deepEqual(verifyConditions1.args[0][1], {options: {...options, branches}, logger: t.context.logger});
   t.is(verifyConditions2.callCount, 1);
-  t.deepEqual(verifyConditions2.args[0][1], {options, logger: t.context.logger});
+  t.deepEqual(verifyConditions2.args[0][1], {options: {...options, branches}, logger: t.context.logger});
 
   t.is(analyzeCommits.callCount, 1);
-  t.deepEqual(analyzeCommits.args[0][0], config);
-  t.deepEqual(analyzeCommits.args[0][1].options, options);
+  t.deepEqual(analyzeCommits.args[0][0], {...config, branches});
+  t.deepEqual(analyzeCommits.args[0][1].options, {...options, branches});
   t.deepEqual(analyzeCommits.args[0][1].logger, t.context.logger);
   t.deepEqual(analyzeCommits.args[0][1].lastRelease, lastRelease);
   t.deepEqual(analyzeCommits.args[0][1].commits[0].hash, commits[0].hash);
   t.deepEqual(analyzeCommits.args[0][1].commits[0].message, commits[0].message);
 
   t.is(verifyRelease.callCount, 1);
-  t.deepEqual(verifyRelease.args[0][0], config);
-  t.deepEqual(verifyRelease.args[0][1].options, options);
+  t.deepEqual(verifyRelease.args[0][0], {...config, branches});
+  t.deepEqual(verifyRelease.args[0][1].options, {...options, branches});
   t.deepEqual(verifyRelease.args[0][1].logger, t.context.logger);
   t.deepEqual(verifyRelease.args[0][1].lastRelease, lastRelease);
   t.deepEqual(verifyRelease.args[0][1].commits[0].hash, commits[0].hash);
@@ -116,8 +131,8 @@ test.serial('Plugins are called with expected values', async t => {
   t.deepEqual(verifyRelease.args[0][1].nextRelease, nextRelease);
 
   t.is(generateNotes.callCount, 1);
-  t.deepEqual(generateNotes.args[0][0], config);
-  t.deepEqual(generateNotes.args[0][1].options, options);
+  t.deepEqual(generateNotes.args[0][0], {...config, branches});
+  t.deepEqual(generateNotes.args[0][1].options, {...options, branches});
   t.deepEqual(generateNotes.args[0][1].logger, t.context.logger);
   t.deepEqual(generateNotes.args[0][1].lastRelease, lastRelease);
   t.deepEqual(generateNotes.args[0][1].commits[0].hash, commits[0].hash);
@@ -125,8 +140,8 @@ test.serial('Plugins are called with expected values', async t => {
   t.deepEqual(generateNotes.args[0][1].nextRelease, nextRelease);
 
   t.is(prepare.callCount, 1);
-  t.deepEqual(prepare.args[0][0], config);
-  t.deepEqual(prepare.args[0][1].options, options);
+  t.deepEqual(prepare.args[0][0], {...config, branches});
+  t.deepEqual(prepare.args[0][1].options, {...options, branches});
   t.deepEqual(prepare.args[0][1].logger, t.context.logger);
   t.deepEqual(prepare.args[0][1].lastRelease, lastRelease);
   t.deepEqual(prepare.args[0][1].commits[0].hash, commits[0].hash);
@@ -134,8 +149,8 @@ test.serial('Plugins are called with expected values', async t => {
   t.deepEqual(prepare.args[0][1].nextRelease, {...nextRelease, ...{notes}});
 
   t.is(publish1.callCount, 1);
-  t.deepEqual(publish1.args[0][0], config);
-  t.deepEqual(publish1.args[0][1].options, options);
+  t.deepEqual(publish1.args[0][0], {...config, branches});
+  t.deepEqual(publish1.args[0][1].options, {...options, branches});
   t.deepEqual(publish1.args[0][1].logger, t.context.logger);
   t.deepEqual(publish1.args[0][1].lastRelease, lastRelease);
   t.deepEqual(publish1.args[0][1].commits[0].hash, commits[0].hash);
@@ -143,8 +158,8 @@ test.serial('Plugins are called with expected values', async t => {
   t.deepEqual(publish1.args[0][1].nextRelease, {...nextRelease, ...{notes}});
 
   t.is(success.callCount, 1);
-  t.deepEqual(success.args[0][0], config);
-  t.deepEqual(success.args[0][1].options, options);
+  t.deepEqual(success.args[0][0], {...config, branches});
+  t.deepEqual(success.args[0][1].options, {...options, branches});
   t.deepEqual(success.args[0][1].logger, t.context.logger);
   t.deepEqual(success.args[0][1].lastRelease, lastRelease);
   t.deepEqual(success.args[0][1].commits[0].hash, commits[0].hash);
@@ -210,7 +225,13 @@ test.serial('Use new gitHead, and recreate release notes if a prepare plugin cre
   commits = (await gitCommits(['Second'])).concat(commits);
   await push();
 
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
 
   const generateNotes = stub().resolves(notes);
@@ -270,7 +291,13 @@ test.serial('Call all "success" plugins even if one errors out', async t => {
   await gitCommits(['Second']);
   await push();
 
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
   const verifyConditions1 = stub().resolves();
   const verifyConditions2 = stub().resolves();
@@ -282,6 +309,15 @@ test.serial('Call all "success" plugins even if one errors out', async t => {
   const success2 = stub().resolves();
 
   const config = {branch: 'master', repositoryUrl, globalOpt: 'global', tagFormat: `v\${version}`};
+  const branches = [
+    {
+      channel: undefined,
+      name: 'master',
+      range: '>=1.0.0',
+      tags: [{channel: undefined, gitTag: 'v1.0.0', version: '1.0.0'}],
+      type: 'release',
+    },
+  ];
   const options = {
     ...config,
     verifyConditions: [verifyConditions1, verifyConditions2],
@@ -300,7 +336,7 @@ test.serial('Call all "success" plugins even if one errors out', async t => {
   await t.throws(semanticRelease(options));
 
   t.is(success1.callCount, 1);
-  t.deepEqual(success1.args[0][0], config);
+  t.deepEqual(success1.args[0][0], {...config, branches});
   t.deepEqual(success1.args[0][1].releases, [
     {...release, ...nextRelease, ...{notes}, ...{pluginName: '[Function: proxy]'}},
   ]);
@@ -323,6 +359,15 @@ test.serial('Log all "verifyConditions" errors', async t => {
   const error3 = new SemanticReleaseError('error 3', 'ERR3');
   const fail = stub().resolves();
   const config = {branch: 'master', repositoryUrl, tagFormat: `v\${version}`};
+  const branches = [
+    {
+      channel: undefined,
+      name: 'master',
+      range: '>=1.0.0',
+      tags: [],
+      type: 'release',
+    },
+  ];
   const options = {
     ...config,
     verifyConditions: [stub().rejects(new AggregateError([error1, error2])), stub().rejects(error3)],
@@ -344,8 +389,8 @@ test.serial('Log all "verifyConditions" errors', async t => {
   ]);
   t.true(t.context.error.calledAfter(t.context.log));
   t.is(fail.callCount, 1);
-  t.deepEqual(fail.args[0][0], config);
-  t.deepEqual(fail.args[0][1].options, options);
+  t.deepEqual(fail.args[0][0], {...config, branches});
+  t.deepEqual(fail.args[0][1].options, {...options, branches});
   t.deepEqual(fail.args[0][1].logger, t.context.logger);
   t.deepEqual(fail.args[0][1].errors, [error2, error3]);
 });
@@ -365,6 +410,15 @@ test.serial('Log all "verifyRelease" errors', async t => {
   const error2 = new SemanticReleaseError('error 2', 'ERR2');
   const fail = stub().resolves();
   const config = {branch: 'master', repositoryUrl, tagFormat: `v\${version}`};
+  const branches = [
+    {
+      channel: undefined,
+      name: 'master',
+      range: '>=1.0.0',
+      tags: [{channel: undefined, gitTag: 'v1.0.0', version: '1.0.0'}],
+      type: 'release',
+    },
+  ];
   const options = {
     ...config,
     verifyConditions: stub().resolves(),
@@ -383,7 +437,7 @@ test.serial('Log all "verifyRelease" errors', async t => {
   t.deepEqual(t.context.log.args[t.context.log.args.length - 2], ['%s error 1', 'ERR1']);
   t.deepEqual(t.context.log.args[t.context.log.args.length - 1], ['%s error 2', 'ERR2']);
   t.is(fail.callCount, 1);
-  t.deepEqual(fail.args[0][0], config);
+  t.deepEqual(fail.args[0][0], {...config, branches});
   t.deepEqual(fail.args[0][1].errors, [error1, error2]);
 });
 
@@ -398,7 +452,13 @@ test.serial('Dry-run skips publish and success', async t => {
   await gitCommits(['Second']);
   await push();
 
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
 
   const verifyConditions = stub().resolves();
@@ -482,7 +542,13 @@ test.serial('Force a dry-run if not on a CI and "noCi" is not explicitly set', a
   await gitCommits(['Second']);
   await push();
 
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
 
   const verifyConditions = stub().resolves();
@@ -532,7 +598,13 @@ test.serial('Allow local releases with "noCi" option', async t => {
   await gitCommits(['Second']);
   await push();
 
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
 
   const verifyConditions = stub().resolves();
@@ -587,7 +659,13 @@ test.serial('Accept "undefined" value returned by the "generateNotes" plugins', 
   await push();
 
   const lastRelease = {version: '1.0.0', gitHead: commits[commits.length - 1].hash, gitTag: 'v1.0.0'};
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const analyzeCommits = stub().resolves(nextRelease.type);
   const verifyRelease = stub().resolves();
   const generateNotes = stub().resolves();
@@ -904,7 +982,13 @@ test.serial('Get all commits including the ones not in the shallow clone', async
 
   await gitShallowClone(repositoryUrl);
 
-  const nextRelease = {type: 'major', version: '2.0.0', gitHead: await getGitHead(), gitTag: 'v2.0.0'};
+  const nextRelease = {
+    type: 'major',
+    version: '2.0.0',
+    gitHead: await getGitHead(),
+    gitTag: 'v2.0.0',
+    channel: undefined,
+  };
   const notes = 'Release notes';
   const analyzeCommits = stub().resolves(nextRelease.type);
 
